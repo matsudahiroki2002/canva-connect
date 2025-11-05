@@ -1,4 +1,3 @@
-// api/token.js
 export const config = { runtime: "edge" };
 
 export default async function handler(req) {
@@ -9,8 +8,8 @@ export default async function handler(req) {
     }
 
     const id     = process.env.CANVA_CLIENT_ID;
-    const secret = process.env.CANVA_CLIENT_SECRET;  // Public なら空でOK
-    const mode   = (process.env.CANVA_APP_TYPE || "").toLowerCase(); // "public" or "confidential"
+    const secret = process.env.CANVA_CLIENT_SECRET;
+    const mode   = (process.env.CANVA_APP_TYPE || "").toLowerCase();
     if (!id) {
       return new Response(JSON.stringify({ error:{ code:"500", message:"Missing env: CANVA_CLIENT_ID" } }),
         { status:500, headers:{ "content-type":"application/json" } });
@@ -23,10 +22,9 @@ export default async function handler(req) {
         { status:400, headers:{ "content-type":"application/json" } });
     }
 
-    // ✅ 正しいトークンエンドポイント
+    // ✅ 正しいトークンエンドポイント（ここが最重要）
     const endpoint = "https://api.canva.com/rest/v1/oauth/token";
 
-    // Public/Confidential を自動判定（環境変数で上書き可）
     const isPublic = (mode === "public") || (!mode && !secret);
 
     const headers = {
@@ -42,7 +40,6 @@ export default async function handler(req) {
       grant_type,
       code,
       redirect_uri,
-      // Public+PKCE では client_id と code_verifier を送る
       ...(isPublic ? { client_id: id, code_verifier: code_verifier || "" }
                    : { code_verifier: code_verifier || "" })
     });
@@ -52,17 +49,14 @@ export default async function handler(req) {
 
     const debug = {
       upstream: { url: endpoint, status: r.status, mode: isPublic ? "public" : "confidential" },
-      sent: {
-        hasAuthHeader: !!headers.Authorization,
-        has_code: !!code, has_verifier: !!code_verifier, grant_type, redirect_uri
-      }
+      sent: { hasAuthHeader: !!headers.Authorization, has_code: !!code, has_verifier: !!code_verifier, grant_type, redirect_uri }
     };
 
     try {
       const json = JSON.parse(text);
       return new Response(JSON.stringify({ debug, ...json }), { status: r.status, headers: { "content-type": "application/json" } });
     } catch {
-      return new Response(JSON.stringify({ debug, raw: text.slice(0, 400) }), { status: r.status, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ debug, raw: text.slice(0,400) }), { status: r.status, headers: { "content-type": "application/json" } });
     }
   } catch (e) {
     return new Response(JSON.stringify({ error:{ code:"500", message:"proxy exception", detail:String(e) } }),
