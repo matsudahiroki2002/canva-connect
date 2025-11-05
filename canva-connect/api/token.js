@@ -42,7 +42,7 @@ export default async function handler(req) {
       code_verifier
     });
 
-    const r = await fetch("https://www.canva.com/api/oauth/token", {
+    const r = await fetch("https://api.canva.com/rest/v1/oauth/token", {
       method: "POST",
       headers: {
         Authorization: `Basic ${basic}`,
